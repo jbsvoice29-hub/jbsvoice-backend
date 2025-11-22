@@ -66,8 +66,12 @@ class ApparelProductAdmin(admin.ModelAdmin):
     
     def image_preview(self, obj):
         """Display larger image preview in detail view."""
-        if obj and obj.image:
-            return format_html('<img src="{}" width="300" style="border-radius: 8px;" />', obj.image.url)
+        try:
+            if obj and obj.image:
+                return format_html('<img src="{}" width="300" style="border-radius: 8px;" />', obj.image.url)
+        except Exception as e:
+            print(f"Error in image_preview: {e}")
+            return f"Error loading image: {str(e)}"
         return 'No image uploaded'
     image_preview.short_description = 'Image Preview'
     
