@@ -32,7 +32,7 @@ class ApparelProductAdmin(admin.ModelAdmin):
     readonly_fields = [
         'created_at',
         'updated_at',
-        'image_preview',
+        # 'image_preview',
     ]
     
     fieldsets = (
@@ -43,7 +43,7 @@ class ApparelProductAdmin(admin.ModelAdmin):
             'fields': ('mrp_price', 'sizes')
         }),
         ('Media', {
-            'fields': ('image', 'image_preview')
+            'fields': ('image',) # 'image_preview')
         }),
         ('WhatsApp Integration', {
             'fields': ('whatsapp_message',)
