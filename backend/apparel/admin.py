@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils.html import format_html
 from .models import ApparelProduct, Order
 
 
@@ -59,18 +60,16 @@ class ApparelProductAdmin(admin.ModelAdmin):
     def image_thumbnail(self, obj):
         """Display small thumbnail in list view."""
         if obj.image:
-            return f'<img src="{obj.image.url}" width="50" height="50" style="object-fit: cover; border-radius: 4px;" />'
+            return format_html('<img src="{}" width="50" height="50" style="object-fit: cover; border-radius: 4px;" />', obj.image.url)
         return '-'
     image_thumbnail.short_description = 'Image'
-    image_thumbnail.allow_tags = True
     
     def image_preview(self, obj):
         """Display larger image preview in detail view."""
         if obj.image:
-            return f'<img src="{obj.image.url}" width="300" style="border-radius: 8px;" />'
+            return format_html('<img src="{}" width="300" style="border-radius: 8px;" />', obj.image.url)
         return 'No image uploaded'
     image_preview.short_description = 'Image Preview'
-    image_preview.allow_tags = True
     
     class Media:
         css = {

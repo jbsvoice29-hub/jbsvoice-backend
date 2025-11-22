@@ -5,6 +5,9 @@ set -o errexit
 # Install dependencies
 pip install -r requirements.txt
 
+# Create media directory
+mkdir -p media/apparel
+
 # Collect static files
 python manage.py collectstatic --no-input
 
