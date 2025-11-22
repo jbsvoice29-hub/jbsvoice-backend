@@ -32,7 +32,7 @@ class ApparelProductAdmin(admin.ModelAdmin):
     readonly_fields = [
         'created_at',
         'updated_at',
-        # 'image_preview',
+        'image_preview',
     ]
     
     fieldsets = (
@@ -43,7 +43,7 @@ class ApparelProductAdmin(admin.ModelAdmin):
             'fields': ('mrp_price', 'sizes')
         }),
         ('Media', {
-            'fields': ('image',) # 'image_preview')
+            'fields': ('image', 'image_preview')
         }),
         ('WhatsApp Integration', {
             'fields': ('whatsapp_message',)
@@ -75,10 +75,7 @@ class ApparelProductAdmin(admin.ModelAdmin):
         return 'No image uploaded'
     image_preview.short_description = 'Image Preview'
     
-    class Media:
-        css = {
-            'all': ('admin/css/custom_admin.css',)
-        }
+    image_preview.short_description = 'Image Preview'
 
 
 @admin.register(Order)
