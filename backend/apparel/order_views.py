@@ -5,6 +5,7 @@ from twilio.rest import Client
 from django.conf import settings
 from decouple import config
 from .models import Order
+from .payment_views import send_whatsapp_notification
 import os
 import uuid
 
@@ -66,76 +67,28 @@ def create_whatsapp_order(request):
             order_status='CONFIRMED'
         )
         
-        # Format WhatsApp message
-        message = f"""🛍️ *New Order Received!*
-
-📦 *Order Details:*
-• Order ID: {order_id}
-• Product: {data['product_title']}
-• Size: {data['size']}
-• Quantity: {data['quantity']}
-• Total: ₹{total_price:.2f}
-💵 Payment: Cash on Delivery
-
-👤 *Customer Details:*
-• Name: {data['full_name']}
-• Mobile: {data['country_code']} {data['mobile']}
-
-📍 *Delivery Address:*
-• House/Flat: {data['house_flat_no']}
-• Street: {data['street_locality']}
-• City: {data['city']}
-• State: {data['state']}
-• PIN Code: {data['pin_code']}
-
-✅ Please confirm this order!"""
-
-        # Send WhatsApp message via Twilio
-        # Use config to read from .env file
-        account_sid = config('TWILIO_ACCOUNT_SID', default=None)
-        auth_token = config('TWILIO_AUTH_TOKEN', default=None)
-        from_whatsapp = config('TWILIO_WHATSAPP_FROM', default=None)
-        to_whatsapp = config('TWILIO_WHATSAPP_TO', default=None)
-        
-        # Check if credentials are configured
-        if not all([account_sid, auth_token, from_whatsapp, to_whatsapp]):
-            print("Twilio credentials missing:", {
-                'account_sid': bool(account_sid),
-                'auth_token': bool(auth_token),
-                'from_whatsapp': from_whatsapp,
-                'to_whatsapp': to_whatsapp
-            })
+        # Send WhatsApp notification
+        try:
+            whatsapp_message_sid = send_whatsapp_notification(order)
+            order.whatsapp_message_sid = whatsapp_message_sid
+            order.save()
+        except Exception as e:
+            print(f"WhatsApp notification failed (non-critical): {str(e)}")
             # Still create order but don't fail if WhatsApp fails
             return Response({
                 'success': True,
                 'message': 'Order placed successfully!',
                 'order_id': order_id,
-                'warning': 'WhatsApp notification could not be sent (credentials missing)'
+                'warning': 'WhatsApp notification could not be sent'
             }, status=status.HTTP_201_CREATED)
         
-        # Initialize Twilio client
-        client = Client(account_sid, auth_token)
-        
-        # Send message
-        message_response = client.messages.create(
-            body=message,
-            from_=from_whatsapp,
-            to=to_whatsapp
-        )
-        
-        # Save WhatsApp message SID
-        order.whatsapp_message_sid = message_response.sid
-        order.save()
-        
-        print(f"WhatsApp Message Sent: SID={message_response.sid}, Status={message_response.status}")
-        print(f"To: {to_whatsapp}")
         
         # Return success response
         return Response({
             'success': True,
             'message': 'Order placed successfully! We will contact you shortly.',
             'order_id': order_id,
-            'whatsapp_message_sid': message_response.sid
+            'whatsapp_message_sid': whatsapp_message_sid
         }, status=status.HTTP_201_CREATED)
         
     except Exception as e:
@@ -146,3 +99,4 @@ def create_whatsapp_order(request):
             {'error': f'Failed to process order: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
