@@ -59,14 +59,14 @@ class ApparelProductAdmin(admin.ModelAdmin):
     
     def image_thumbnail(self, obj):
         """Display small thumbnail in list view."""
-        if obj.image:
+        if obj and obj.image:
             return format_html('<img src="{}" width="50" height="50" style="object-fit: cover; border-radius: 4px;" />', obj.image.url)
         return '-'
     image_thumbnail.short_description = 'Image'
     
     def image_preview(self, obj):
         """Display larger image preview in detail view."""
-        if obj.image:
+        if obj and obj.image:
             return format_html('<img src="{}" width="300" style="border-radius: 8px;" />', obj.image.url)
         return 'No image uploaded'
     image_preview.short_description = 'Image Preview'
