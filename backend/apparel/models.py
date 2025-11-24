@@ -155,13 +155,30 @@ class ApparelProduct(models.Model):
     
     def save(self, *args, **kwargs):
         """Override save to optimize image and set default WhatsApp message."""
-        # Optimize image if it's a new upload or image has changed
-        if self.image:
-            try:
-                self.optimize_image()
-            except Exception as e:
-                print(f"Error optimizing image: {e}")
-                # Continue saving even if optimization fails
+        # Check if this is a new image upload
+        try:
+            # Only optimize if image is new (not already in database)
+            if self.pk:  # Object exists, check if image changed
+                try:
+                    old_instance = ApparelProduct.objects.get(pk=self.pk)
+                    # Only optimize if image has changed
+                    if old_instance.image != self.image:
+                        self.optimize_image()
+                except ApparelProduct.DoesNotExist:
+                    # Object being created, optimize the image
+                    if self.image:
+                        self.optimize_image()
+            else:
+                # New object, optimize if image exists
+                if self.image:
+                    self.optimize_image()
+        except Exception as e:
+            # Log error but don't crash - save without optimization
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Image optimization failed: {e}")
+            print(f"⚠️  Image optimization failed: {e}")
+            print("   → Saving product without optimization")
         
         # Set default WhatsApp message if not provided
         if not self.whatsapp_message:
