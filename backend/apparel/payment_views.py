@@ -177,11 +177,23 @@ def verify_payment(request):
         
         # Send WhatsApp notification
         try:
+            print(f"\n{'='*60}")
+            print(f"🔔 Attempting WhatsApp notification for Order: {order_id}")
+            print(f"{'='*60}")
             whatsapp_message_sid = send_whatsapp_notification(order)
             order.whatsapp_message_sid = whatsapp_message_sid
             order.save()
+            print(f"✅ WhatsApp notification successful!")
+            print(f"{'='*60}\n")
         except Exception as e:
-            print(f"WhatsApp notification failed (non-critical): {str(e)}")
+            error_msg = str(e)
+            print(f"\n{'='*60}")
+            print(f"❌ WhatsApp notification failed (non-critical)")
+            print(f"   Order ID: {order_id}")
+            print(f"   Error: {error_msg}")
+            print(f"{'='*60}\n")
+            import traceback
+            traceback.print_exc()
         
         return Response({
             'success': True,
@@ -202,15 +214,37 @@ def verify_payment(request):
 
 
 def send_whatsapp_notification(order):
-    """Send WhatsApp notification for order."""
-    # Get Twilio credentials
+    """Send WhatsApp notification for order with comprehensive error logging."""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # Get Twilio credentials with detailed logging
     account_sid = config('TWILIO_ACCOUNT_SID', default=None)
     auth_token = config('TWILIO_AUTH_TOKEN', default=None)
     from_whatsapp = config('TWILIO_WHATSAPP_FROM', default=None)
     to_whatsapp = config('TWILIO_WHATSAPP_TO', default=None)
     
-    if not all([account_sid, auth_token, from_whatsapp, to_whatsapp]):
-        raise Exception("Twilio credentials not configured")
+    # Log which credentials are missing (without exposing values)
+    missing_creds = []
+    if not account_sid:
+        missing_creds.append('TWILIO_ACCOUNT_SID')
+    if not auth_token:
+        missing_creds.append('TWILIO_AUTH_TOKEN')
+    if not from_whatsapp:
+        missing_creds.append('TWILIO_WHATSAPP_FROM')
+    if not to_whatsapp:
+        missing_creds.append('TWILIO_WHATSAPP_TO')
+    
+    if missing_creds:
+        error_msg = f"Twilio credentials not configured. Missing: {', '.join(missing_creds)}"
+        logger.error(error_msg)
+        print(f"❌ WhatsApp ERROR: {error_msg}")
+        raise Exception(error_msg)
+    
+    logger.info(f"✅ All Twilio credentials found. Attempting to send WhatsApp for order {order.order_id}")
+    print(f"🔄 Sending WhatsApp notification for order {order.order_id}")
+    print(f"   From: {from_whatsapp}")
+    print(f"   To: {to_whatsapp}")
     
     # Format WhatsApp message
     payment_info = "💳 Payment: Online (PAID)" if order.payment_mode == 'ONLINE' else "💵 Payment: Cash on Delivery"
@@ -238,13 +272,30 @@ def send_whatsapp_notification(order):
 
 ✅ Please process this order!"""
     
-    # Initialize Twilio client and send message
-    client = Client(account_sid, auth_token)
-    message_response = client.messages.create(
-        body=message,
-        from_=from_whatsapp,
-        to=to_whatsapp
-    )
-    
-    print(f"WhatsApp Message Sent: SID={message_response.sid}")
-    return message_response.sid
+    try:
+        # Initialize Twilio client and send message
+        client = Client(account_sid, auth_token)
+        logger.info(f"Twilio client initialized. Sending message...")
+        print(f"📤 Twilio client initialized successfully")
+        
+        message_response = client.messages.create(
+            body=message,
+            from_=from_whatsapp,
+            to=to_whatsapp
+        )
+        
+        logger.info(f"✅ WhatsApp Message Sent Successfully: SID={message_response.sid}, Status={message_response.status}")
+        print(f"✅ WhatsApp Message Sent: SID={message_response.sid}")
+        print(f"   Status: {message_response.status}")
+        
+        return message_response.sid
+        
+    except Exception as e:
+        error_details = str(e)
+        logger.error(f"❌ Twilio API Error: {error_details}")
+        print(f"❌ WhatsApp Send Failed!")
+        print(f"   Error Type: {type(e).__name__}")
+        print(f"   Error Message: {error_details}")
+        
+        # Re-raise with more context
+        raise Exception(f"Twilio WhatsApp Error: {error_details}")

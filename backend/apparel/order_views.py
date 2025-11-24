@@ -69,17 +69,29 @@ def create_whatsapp_order(request):
         
         # Send WhatsApp notification
         try:
+            print(f"\n{'='*60}")
+            print(f"🔔 Attempting WhatsApp notification for Order: {order_id}")
+            print(f"{'='*60}")
             whatsapp_message_sid = send_whatsapp_notification(order)
             order.whatsapp_message_sid = whatsapp_message_sid
             order.save()
+            print(f"✅ WhatsApp notification successful!")
+            print(f"{'='*60}\n")
         except Exception as e:
-            print(f"WhatsApp notification failed (non-critical): {str(e)}")
+            error_msg = str(e)
+            print(f"\n{'='*60}")
+            print(f"❌ WhatsApp notification failed (non-critical)")
+            print(f"   Order ID: {order_id}")
+            print(f"   Error: {error_msg}")
+            print(f"{'='*60}\n")
+            import traceback
+            traceback.print_exc()
             # Still create order but don't fail if WhatsApp fails
             return Response({
                 'success': True,
                 'message': 'Order placed successfully!',
                 'order_id': order_id,
-                'warning': 'WhatsApp notification could not be sent'
+                'warning': f'WhatsApp notification could not be sent: {error_msg}'
             }, status=status.HTTP_201_CREATED)
         
         
