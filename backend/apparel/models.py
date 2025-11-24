@@ -1,9 +1,5 @@
 from django.db import models
 from django.core.validators import MinValueValidator
-from PIL import Image
-from io import BytesIO
-from django.core.files.uploadedfile import InMemoryUploadedFile
-import sys
 import os
 
 
@@ -106,80 +102,8 @@ class ApparelProduct(models.Model):
         }
         return color_map.get(self.status, 'bg-gray-500')
     
-    def optimize_image(self):
-        """Optimize uploaded image by resizing and compressing."""
-        if not self.image:
-            return
-        
-        # Open the image
-        img = Image.open(self.image)
-        
-        # Convert RGBA to RGB if necessary (for PNG with transparency)
-        if img.mode in ('RGBA', 'LA', 'P'):
-            # Create a white background
-            background = Image.new('RGB', img.size, (255, 255, 255))
-            if img.mode == 'P':
-                img = img.convert('RGBA')
-            background.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
-            img = background
-        elif img.mode != 'RGB':
-            img = img.convert('RGB')
-        
-        # Calculate new dimensions (max width: 1200px, maintain aspect ratio)
-        max_width = 1200
-        if img.width > max_width:
-            # Calculate proportional height
-            ratio = max_width / img.width
-            new_height = int(img.height * ratio)
-            img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
-        
-        # Save to BytesIO with optimization
-        output = BytesIO()
-        img.save(output, format='JPEG', quality=85, optimize=True)
-        output.seek(0)
-        
-        # Get the original filename and change extension to .jpg
-        original_name = self.image.name
-        name_without_ext = os.path.splitext(os.path.basename(original_name))[0]
-        new_filename = f"{name_without_ext}.jpg"
-        
-        # Replace the image field with optimized version
-        self.image = InMemoryUploadedFile(
-            output,
-            'ImageField',
-            new_filename,
-            'image/jpeg',
-            sys.getsizeof(output),
-            None
-        )
-    
     def save(self, *args, **kwargs):
-        """Override save to optimize image and set default WhatsApp message."""
-        # Check if this is a new image upload
-        try:
-            # Only optimize if image is new (not already in database)
-            if self.pk:  # Object exists, check if image changed
-                try:
-                    old_instance = ApparelProduct.objects.get(pk=self.pk)
-                    # Only optimize if image has changed
-                    if old_instance.image != self.image:
-                        self.optimize_image()
-                except ApparelProduct.DoesNotExist:
-                    # Object being created, optimize the image
-                    if self.image:
-                        self.optimize_image()
-            else:
-                # New object, optimize if image exists
-                if self.image:
-                    self.optimize_image()
-        except Exception as e:
-            # Log error but don't crash - save without optimization
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Image optimization failed: {e}")
-            print(f"⚠️  Image optimization failed: {e}")
-            print("   → Saving product without optimization")
-        
+        """Override save to set default WhatsApp message."""
         # Set default WhatsApp message if not provided
         if not self.whatsapp_message:
             self.whatsapp_message = f"Hello! I would like to order {self.title}."
