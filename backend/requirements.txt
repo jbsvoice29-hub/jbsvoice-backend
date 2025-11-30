@@ -5,7 +5,7 @@ psycopg2-binary==2.9.10
 Pillow==10.4.0
 python-decouple
 cloudinary
-django-cloudinary-storage==3.8
+django-cloudinary-storage
 setuptools>=65.0.0
 twilio==8.10.0
 razorpay==1.4.1
